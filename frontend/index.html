@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AVAchat SHADOW | Admin Console</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Estilos específicos para o admin */
+        .terminal-header {
+            background: #000;
+            padding: 8px 16px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #0f0;
+            border-bottom: 1px solid #333;
+            margin-bottom: 20px;
+        }
+        
+        .command-line {
+            font-family: monospace;
+            font-size: 12px;
+            color: #fff;
+            background: #000;
+            padding: 8px;
+            margin: 10px 0;
+            border-left: 2px solid #fff;
+        }
+        
+        .blink {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">⚡</div>
+                <h1>AVAchat <span>SHADOW</span></h1>
+            </div>
+            <div class="creditos">
+                <p>EXPEDITO ANDERSON RUFINO</p>
+                <p style="font-size: 8px;">NÍVEL: MÁXIMO</p>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="card">
+                <div class="terminal-header">
+                    <span>⫸ AVAchat_Shadow_v7.0_Admin@secure:~$</span>
+                    <span class="blink">█</span>
+                </div>
+                
+                <div class="icon-large">🎯</div>
+                <h2>CRIAR LINK DESCARTÁVEL</h2>
+                <p>Gere links únicos para conversas 1:1 ultra sigilosas</p>
+                
+                <div class="info-box">
+                    <p>├── 🔗 LINK FUNCIONA APENAS 1 VEZ</p>
+                    <p>├── ⏰ EXPIRA EM 24 HORAS</p>
+                    <p>├── 🔐 CRIPTOGRAFIA AES-256-GCM + XChaCha20</p>
+                    <p>├── 📁 ENVIO DE DOCUMENTOS (MAX 5MB)</p>
+                    <p>├── 🕵️ ANONIMATO TOTAL (SEM LOGS)</p>
+                    <p>└── 💣 AUTO-DESTRUIÇÃO EM 30 SEGUNDOS</p>
+                </div>
+                
+                <div class="command-line">
+                    <span style="color: #0f0;">$</span> digite o assunto da conversa:
+                </div>
+                <input type="text" id="assunto" placeholder="Ex: OPERAÇÃO_SIGILO / PROJETO_X / REUNIÃO_ALTA_SEGURANÇA">
+                
+                <button id="btn-criar-link">🔗 GERAR LINK TÁTICO</button>
+                
+                <div class="warning-box">
+                    <p>⚠️ AVISO DE SEGURANÇA</p>
+                    <p>Este link será completamente destruído após o primeiro uso.</p>
+                    <p>Não compartilhe com pessoas não autorizadas.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal do Link Criado -->
+        <div id="modal-link" class="modal">
+            <div class="modal-content">
+                <span class="modal-close">&times;</span>
+                <div class="terminal-header">
+                    <span>⫸ LINK_GERADO_SUCESSO@secure:~$</span>
+                </div>
+                <div class="icon-large">✅</div>
+                <h3>LINK OPERACIONAL</h3>
+                <p>Compartilhe este link com o destinatário</p>
+                <div class="link-container">
+                    <input type="text" id="link-gerado" readonly>
+                    <button id="btn-copiar-link">📋 COPIAR</button>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <div class="command-line">
+                    <span style="color: #0f0;">$</span> digite seu apelido para entrar:
+                </div>
+                <input type="text" id="admin-apelido" placeholder="APELIDO_TÁTICO" maxlength="15">
+                <button id="btn-entrar-admin">🚪 ENTRAR NO CANAL SEGURO</button>
+                
+                <div class="warning-box">
+                    <p>💣 LINK DESCARTÁVEL - SERÁ DESTRUÍDO APÓS USO</p>
+                </div>
+                <button id="btn-fechar-modal" class="secondary">FECHAR</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

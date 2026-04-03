@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AVAchat SHADOW | Canal Ativo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .terminal-header {
+            background: #000;
+            padding: 8px 16px;
+            font-family: monospace;
+            font-size: 10px;
+            color: #0f0;
+            border-bottom: 1px solid #333;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 16px;
+            background: #050505;
+            border-bottom: 1px solid #1a1a1a;
+            font-family: monospace;
+            font-size: 9px;
+        }
+        
+        .encryption-badge {
+            color: #0f0;
+        }
+        
+        .timer-badge {
+            color: #ff0;
+        }
+        
+        .blink {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .chat-messages {
+            background-image: radial-gradient(rgba(255,255,255,0.01) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">💀</div>
+                <h1>AVAchat <span>SHADOW</span></h1>
+            </div>
+            <div class="creditos">
+                <p id="meu-apelido-display"></p>
+                <p style="font-size: 8px;">CANAL: ATIVO</p>
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <div class="terminal-header">
+                <span>⫸ AVAchat_Shadow_v7.0@secure:~$</span>
+                <span style="color: #0f0;">canal_seguro_estabelecido</span>
+                <span class="blink">█</span>
+            </div>
+            
+            <div class="status-bar">
+                <div class="encryption-badge">
+                    🔐 AES-256-GCM | XChaCha20 | RSA-4096
+                </div>
+                <div class="online-status">
+                    <span id="online-indicator"></span>
+                    <span id="online-text" style="color: #666;">AGUARDANDO CONEXÃO</span>
+                </div>
+                <div class="timer-badge">
+                    💣 AUTO-DESTRUIÇÃO: 30s
+                </div>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages">
+                <div class="system-message">🔐 CANAL SEGURO ESTABELECIDO</div>
+                <div class="system-message">⚡ TORNADO ATIVADO - COMUNICAÇÃO ANÔNIMA</div>
+                <div class="system-message">💣 MENSAGENS SERÃO DESTRUÍDAS EM 30 SEGUNDOS</div>
+            </div>
+            
+            <div class="typing-indicator" id="typing-indicator" style="display: none;">
+                <span>✍️ PARCEIRO ESTÁ DIGITANDO...</span>
+            </div>
+            
+            <div class="chat-input-area">
+                <div class="input-actions">
+                    <label for="file-input" class="btn-file">📎 ANEXAR DOCUMENTO</label>
+                    <input type="file" id="file-input" style="display: none;" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt">
+                    <span id="file-name" class="file-name"></span>
+                </div>
+                <div class="input-wrapper">
+                    <input type="text" id="mensagem" placeholder="DIGITE SUA MENSAGEM... (MÁX. 500 CARACTERES)" maxlength="500">
+                    <button id="btn-enviar">📨 ENVIAR</button>
+                </div>
+                <div class="command-line" style="margin-top: 8px; font-size: 8px; text-align: center;">
+                    <span style="color: #0f0;">⫸</span> Tudo que você enviar será automaticamente destruído após 30 segundos
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .command-line {
+            font-family: monospace;
+            font-size: 10px;
+            color: #666;
+            background: #000;
+            padding: 6px;
+            border-left: 2px solid #333;
+        }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

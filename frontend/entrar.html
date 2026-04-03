@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AVAchat SHADOW | Acesso Seguro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .terminal-header {
+            background: #000;
+            padding: 8px 16px;
+            font-family: monospace;
+            font-size: 11px;
+            color: #0f0;
+            border-bottom: 1px solid #333;
+            margin-bottom: 20px;
+        }
+        
+        .command-line {
+            font-family: monospace;
+            font-size: 12px;
+            color: #fff;
+            background: #000;
+            padding: 8px;
+            margin: 10px 0;
+            border-left: 2px solid #fff;
+        }
+        
+        .security-badge {
+            background: rgba(0,255,0,0.1);
+            border: 1px solid #0f0;
+            padding: 8px;
+            text-align: center;
+            font-size: 10px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">🔑</div>
+                <h1>AVAchat <span>SHADOW</span></h1>
+            </div>
+            <div class="creditos">
+                <p>EXPEDITO ANDERSON RUFINO</p>
+                <p style="font-size: 8px;">ACESSO: CONVIDADO</p>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="card">
+                <div class="terminal-header">
+                    <span>⫸ AVAchat_Shadow_v7.0_guest@secure:~$</span>
+                    <span class="blink">█</span>
+                </div>
+                
+                <div class="icon-large">🔐</div>
+                <h2>ACESSO AUTORIZADO</h2>
+                <p>Insira o link de convite recebido para acessar o canal seguro</p>
+                
+                <div class="security-badge">
+                    🔒 CONEXÃO CRIPTOGRAFADA | 🔐 ANONIMATO GARANTIDO | 💣 AUTO-DESTRUIÇÃO
+                </div>
+                
+                <div class="info-box">
+                    <p>├── 🔗 LINK DESCARTÁVEL (1 USO)</p>
+                    <p>├── 🔐 CRIPTOGRAFIA MILITAR AES-256</p>
+                    <p>├── 🕵️ ZERO REGISTROS DE ACESSO</p>
+                    <p>├── 📁 ENVIO DE DOCUMENTOS SEGURO</p>
+                    <p>└── 💣 MENSAGENS DESAPARECEM EM 30s</p>
+                </div>
+                
+                <div class="command-line">
+                    <span style="color: #0f0;">$</span> cole o link recebido:
+                </div>
+                <input type="text" id="link-recebido" placeholder="http://.../join/xxxxxx">
+                
+                <div class="command-line">
+                    <span style="color: #0f0;">$</span> digite seu identificador tático:
+                </div>
+                <input type="text" id="convidado-apelido" placeholder="APELIDO_TÁTICO" maxlength="15">
+                
+                <button id="btn-validar-link">🔑 AUTENTICAR E ENTRAR</button>
+                
+                <div class="warning-box">
+                    <p>⚠️ LINK DESCARTÁVEL</p>
+                    <p>Este link funciona apenas UMA vez e será destruído após o acesso.</p>
+                    <p>Não compartilhe com terceiros.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Loading -->
+        <div id="modal-loading" class="modal">
+            <div class="modal-content" style="text-align: center;">
+                <div class="terminal-header">
+                    <span>⫸ VERIFICANDO_CREDENCIAIS@secure:~$</span>
+                </div>
+                <div class="loading-spinner"></div>
+                <h3>VERIFICANDO LINK...</h3>
+                <p>Estabelecendo canal seguro</p>
+                <div class="command-line" style="margin-top: 20px;">
+                    <span style="color: #0f0;">$</span> handshake em andamento<span class="blink">█</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Erro -->
+        <div id="modal-erro" class="modal">
+            <div class="modal-content">
+                <div class="terminal-header">
+                    <span>⫸ ERRO_CRÍTICO@secure:~$</span>
+                </div>
+                <div class="icon-large">❌</div>
+                <h3>ACESSO NEGADO</h3>
+                <p id="msg-erro">Link inválido, expirado ou já utilizado.</p>
+                <div class="warning-box">
+                    <p>⚠️ ESTE ACESSO FOI REGISTRADO</p>
+                    <p>Tentativas excessivas resultarão em bloqueio temporário.</p>
+                </div>
+                <button id="btn-fechar-erro" class="secondary">TENTAR NOVAMENTE</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .blink {
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+Apr 05 12:35:50.000 [notice] Tor 0.4.9.5 (git-1442ca4852283d66) opening new log file.
+Apr 05 12:35:50.387 [notice] We compiled with OpenSSL 30500050: OpenSSL 3.5.5 27 Jan 2026 and we are running with OpenSSL 30500050: 3.5.5. These two versions should be binary compatible.
+Apr 05 12:35:50.393 [notice] Tor 0.4.9.5 (git-1442ca4852283d66) running on Windows 8 [or later] with Libevent 2.1.12-stable, OpenSSL 3.5.5, Zlib 1.3.2, Liblzma N/A, Libzstd N/A and Unknown N/A as libc.
+Apr 05 12:35:50.393 [notice] Tor can't help you if you use it wrong! Learn how to be safe at https://support.torproject.org/faq/staying-anonymous/
+Apr 05 12:35:50.406 [notice] Read configuration file "C:\Users\exped\AVA.chat\tor\Data\Tor\torrc".
+Apr 05 12:35:50.406 [warn] Skipping obsolete configuration option "WarnUnsafeSocks".
+Apr 05 12:35:50.406 [warn] Path for GeoIPFile (<default>) is relative and will resolve to C:\Users\exped\OneDrive\Desktop\Tor Browser\Browser\TorBrowser\Tor\<default>. Is this what you wanted?
+Apr 05 12:35:50.406 [warn] Path for GeoIPv6File (<default>) is relative and will resolve to C:\Users\exped\OneDrive\Desktop\Tor Browser\Browser\TorBrowser\Tor\<default>. Is this what you wanted?
+Apr 05 12:35:50.408 [notice] Opening Socks listener on 127.0.0.1:9050
+Apr 05 12:35:50.408 [notice] Opened Socks listener connection (ready) on 127.0.0.1:9050
+Apr 05 12:35:50.408 [notice] Opening Control listener on 127.0.0.1:9051
+Apr 05 12:35:50.408 [notice] Opened Control listener connection (ready) on 127.0.0.1:9051
+Apr 05 12:35:50.000 [notice] Set list of supported TLS groups to: ?*X25519MLKEM768 / ?SecP256r1MLKEM768 / *P-256:?X25519:P-224
+Apr 05 12:35:50.000 [notice] Bootstrapped 0% (starting): Starting
+Apr 05 12:35:50.000 [notice] Starting with guard context "default"
+Apr 05 12:35:51.000 [notice] Bootstrapped 5% (conn): Connecting to a relay
+Apr 05 12:35:51.000 [notice] Bootstrapped 10% (conn_done): Connected to a relay
+Apr 05 12:35:52.000 [notice] Bootstrapped 14% (handshake): Handshaking with a relay
+Apr 05 12:35:52.000 [notice] Bootstrapped 15% (handshake_done): Handshake with a relay done
+Apr 05 12:35:52.000 [notice] Bootstrapped 20% (onehop_create): Establishing an encrypted directory connection
+Apr 05 12:35:53.000 [notice] Bootstrapped 25% (requesting_status): Asking for networkstatus consensus
+Apr 05 12:35:53.000 [notice] Bootstrapped 30% (loading_status): Loading networkstatus consensus
+Apr 05 12:35:57.000 [notice] I learned some more directory information, but not enough to build a circuit: We have no usable consensus.
+Apr 05 12:35:57.000 [notice] Bootstrapped 40% (loading_keys): Loading authority key certs
+Apr 05 12:35:58.000 [notice] The current consensus has no exit nodes. Tor can only build internal paths, such as paths to onion services.
+Apr 05 12:35:58.000 [notice] Bootstrapped 45% (requesting_descriptors): Asking for relay descriptors
+Apr 05 12:35:58.000 [notice] I learned some more directory information, but not enough to build a circuit: We need more microdescriptors: we have 0/9995, and can only build 0% of likely paths. (We have 0% of guards bw, 0% of midpoint bw, and 0% of end bw (no exits in consensus, using mid) = 0% of path bw.)
+Apr 05 12:35:59.000 [notice] I learned some more directory information, but not enough to build a circuit: We need more microdescriptors: we have 0/9995, and can only build 0% of likely paths. (We have 0% of guards bw, 0% of midpoint bw, and 0% of end bw (no exits in consensus, using mid) = 0% of path bw.)
+Apr 05 12:35:59.000 [notice] Bootstrapped 50% (loading_descriptors): Loading relay descriptors
+Apr 05 12:36:11.000 [notice] The current consensus contains exit nodes. Tor can build exit and internal paths.
+Apr 05 12:36:14.000 [notice] Bootstrapped 55% (loading_descriptors): Loading relay descriptors
+Apr 05 12:36:15.000 [notice] Bootstrapped 61% (loading_descriptors): Loading relay descriptors
+Apr 05 12:36:16.000 [notice] Bootstrapped 67% (loading_descriptors): Loading relay descriptors
+Apr 05 12:36:16.000 [notice] Bootstrapped 75% (enough_dirinfo): Loaded enough directory info to build circuits
+Apr 05 12:36:17.000 [notice] Bootstrapped 90% (ap_handshake_done): Handshake finished with a relay to build circuits
+Apr 05 12:36:17.000 [notice] Bootstrapped 95% (circuit_create): Establishing a Tor circuit
+Apr 05 12:36:18.000 [notice] Bootstrapped 100% (done): Done
+Apr 05 13:18:17.000 [notice] Interrupt: exiting cleanly.

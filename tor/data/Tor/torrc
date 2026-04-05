@@ -1,0 +1,15 @@
+# Configuração do Tor para AVAchat SHADOW
+# Desenvolvido por: Expedito Anderson Rufino
+
+DataDirectory C:\Users\exped\AVA.chat\tor\Data\Tor
+ControlPort 9051
+CookieAuthentication 1
+
+HiddenServiceDir C:\Users\exped\AVA.chat\tor\Data\hidden_service
+HiddenServicePort 80 127.0.0.1:3000
+
+SafeSocks 1
+RejectPlaintextPorts 1
+WarnUnsafeSocks 0
+
+Log notice file C:\Users\exped\AVA.chat\logs\tor.log

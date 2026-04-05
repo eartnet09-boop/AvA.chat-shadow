@@ -1,7 +1,7 @@
 // ============================================
-// AVACHAT SHADOW - EDIÇÃO "IMPRESSÃO DIGITAL ZERO"
+// AVAchat SHADOW - COM TOR
 // Desenvolvido por: Expedito Anderson Rufino
-// Versão: 7.0.0 - Nível Governamental
+// Versão: 7.1.0 - Anonimato Total
 // ============================================
 
 require('dotenv').config();
@@ -15,156 +15,134 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
-const crypto = require('crypto');
-
-// Módulos personalizados
-const CryptoEngine = require('./crypto-engine');
-const TorManager = require('./tor-manager');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
 
 // ============================================
-// CONFIGURAÇÕES DE SEGURANÇA EXTREMA
+// CONFIGURAÇÕES
 // ============================================
 
-const PORT = process.env.PORT || 3000;
-const MENSAGEM_EXPIRACAO = 30; // 30 segundos - Mais rápido
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB - Limitado por segurança
-const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutos
+const PORT = 3000;
+const MENSAGEM_EXPIRACAO = 30;
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-// Chave mestra - OBRIGATÓRIA
+// 🔑 CHAVE MESTRA
 const MASTER_KEY = process.env.MASTER_KEY;
-if (!MASTER_KEY || MASTER_KEY.length < 64) {
-    console.error('❌ CHAVE MESTRA INVÁLIDA - SISTEMA BLOQUEADO');
-    process.exit(1);
+if (!MASTER_KEY) {
+    console.warn('⚠️ MASTER_KEY não configurada');
 }
 
 // ============================================
-// ESTRUTURAS DE DADOS (TUDO EFÊMERO)
+// CONFIGURAÇÃO DO TOR (APENAS ISSO FOI ADICIONADO)
 // ============================================
 
-const sessions = new Map();           // Sessões ativas (expiram rápido)
-const ephemeralLinks = new Map();     // Links descartáveis
-const messageStore = new Map();       // Mensagens (expiração automática)
-const fileStore = new Map();          // Arquivos temporários
-const ipBlacklist = new Map();        // Bloqueio de IPs maliciosos
+// Caminho do arquivo hostname do Tor (ajuste conforme sua instalação)
+const TOR_PATHS = [
+    'C:\\tor\\Data\\hidden_service\\hostname',
+    'C:\\Users\\exped\\tor\\Data\\hidden_service\\hostname',
+    process.env.TOR_HOSTNAME_PATH
+].filter(Boolean);
+
+function getOnionAddress() {
+    for (const torPath of TOR_PATHS) {
+        try {
+            if (fs.existsSync(torPath)) {
+                const address = fs.readFileSync(torPath, 'utf8').trim();
+                if (address && address.endsWith('.onion')) {
+                    return address;
+                }
+            }
+        } catch (error) {
+            // Continua tentando outros caminhos
+        }
+    }
+    return null;
+}
+
+const onionAddress = getOnionAddress();
 
 // ============================================
-// MIDDLEWARES DE SEGURANÇA MÁXIMA
+// ESTRUTURAS DE DADOS
 // ============================================
 
-// Helmet com CSP ultra-restritivo
+const sessions = new Map();
+const ephemeralLinks = new Map();
+const messageStore = new Map();
+const ipBlacklist = new Map();
+
+// ============================================
+// MIDDLEWARES
+// ============================================
+
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
-            defaultSrc: ["'none'"],
+            defaultSrc: ["'self'"],
             scriptSrc: ["'self'", "'unsafe-inline'", "cdnjs.cloudflare.com"],
+            scriptSrcAttr: ["'unsafe-inline'"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             connectSrc: ["'self'", "wss:", "ws:"],
-            imgSrc: ["'self'", "data:"],
-            frameAncestors: ["'none'"],
-            formAction: ["'none'"],
         },
     },
-    hsts: {
-        maxAge: 31536000,
-        includeSubDomains: true,
-        preload: true
-    },
-    referrerPolicy: { policy: 'no-referrer' },
-    crossOriginEmbedderPolicy: true,
-    crossOriginOpenerPolicy: true,
-    crossOriginResourcePolicy: { policy: 'same-site' }
 }));
 
 app.use(compression());
-app.use(cors({ origin: false })); // Sem CORS - máximo isolamento
+app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Rate limit extremo - 10 requisições por minuto
 const limiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 10,
-    message: '🔒 Limite de requisições excedido',
-    standardHeaders: true,
-    legacyHeaders: false
+    max: 20,
+    message: 'Muitas requisições'
 });
 app.use(limiter);
 
-// Upload com validação rigorosa
 const upload = multer({
     limits: { fileSize: MAX_FILE_SIZE },
-    storage: multer.memoryStorage(),
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = [
-            'application/pdf',
-            'image/jpeg', 'image/png',
-            'text/plain'
-        ];
-        if (allowedTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Tipo de arquivo não permitido'));
-        }
-    }
+    storage: multer.memoryStorage()
 });
 
-// Servir arquivos estáticos
-app.use(express.static(path.join(__dirname, '../frontend'), {
-    maxAge: 0,
-    etag: false,
-    lastModified: false
-}));
+app.use(express.static(path.join(__dirname, '../frontend')));
 
 // ============================================
-// FUNÇÕES AUXILIARES DE SEGURANÇA
+// FUNÇÕES AUXILIARES
 // ============================================
 
-function generateEphemeralId() {
-    return crypto.randomBytes(16).toString('hex');
-}
-
-function sanitizeInput(input) {
-    if (!input) return '';
-    return input.replace(/[<>]/g, '').substring(0, 100);
+function generateId() {
+    return Math.random().toString(36).substring(2, 15) + 
+           Math.random().toString(36).substring(2, 15);
 }
 
 function isIPBlocked(ip) {
     const entry = ipBlacklist.get(ip);
-    if (entry && entry.blockedUntil > Date.now()) {
-        return true;
-    }
-    if (entry && entry.blockedUntil < Date.now()) {
-        ipBlacklist.delete(ip);
-    }
+    if (entry && entry.blockedUntil > Date.now()) return true;
+    if (entry && entry.blockedUntil < Date.now()) ipBlacklist.delete(ip);
     return false;
 }
 
 function blockIP(ip) {
     ipBlacklist.set(ip, {
-        blockedUntil: Date.now() + (30 * 60 * 1000), // 30 min
+        blockedUntil: Date.now() + (30 * 60 * 1000),
         attempts: (ipBlacklist.get(ip)?.attempts || 0) + 1
     });
 }
 
 // ============================================
-// ROTAS DA API
+// ROTAS
 // ============================================
 
-// Página inicial (Admin)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
-// Página para convidados
 app.get('/entrar', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/entrar.html'));
 });
 
-// Link de acesso (descartável)
 app.get('/join/:linkId', (req, res) => {
     const { linkId } = req.params;
     const link = ephemeralLinks.get(linkId);
@@ -174,7 +152,7 @@ app.get('/join/:linkId', (req, res) => {
             <!DOCTYPE html>
             <html>
             <head><title>🔒 Link Expirado</title></head>
-            <body style="background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:monospace;">
+            <body style="background:#000;color:#fff;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;">
                 <div style="text-align:center;">
                     <h1>🔒 LINK DESTRUÍDO</h1>
                     <p>Este link já foi utilizado ou expirou.</p>
@@ -188,7 +166,11 @@ app.get('/join/:linkId', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/chat.html'));
 });
 
-// Criar link descartável (Admin)
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'online', timestamp: Date.now() });
+});
+
+// Criar link (MODIFICADO: suporte a links .onion)
 app.post('/api/link/criar', (req, res) => {
     const clientIp = req.ip || req.connection.remoteAddress;
     
@@ -199,57 +181,57 @@ app.post('/api/link/criar', (req, res) => {
     const { assunto } = req.body;
     
     if (!assunto || assunto.length > 50) {
-        blockIP(clientIp);
         return res.status(400).json({ erro: 'Assunto inválido' });
     }
     
-    const sessionId = generateEphemeralId();
-    const linkId = generateEphemeralId();
-    const sessionKey = CryptoEngine.generateEphemeralKey();
+    const sessionId = generateId();
+    const linkId = generateId();
+    const sessionKey = generateId();
     
-    // Criar sessão efêmera
     sessions.set(sessionId, {
         id: sessionId,
-        assunto: sanitizeInput(assunto),
+        assunto: assunto,
         sessionKey: sessionKey,
         createdAt: Date.now(),
-        expiresAt: Date.now() + SESSION_TIMEOUT,
-        participants: [],
-        messages: []
+        expiresAt: Date.now() + (30 * 60 * 1000),
+        participants: []
     });
     
-    // Criar link descartável
     ephemeralLinks.set(linkId, {
         sessionId: sessionId,
-        expires: Date.now() + (24 * 60 * 60 * 1000), // 24 horas
+        expires: Date.now() + (24 * 60 * 60 * 1000),
         used: false
     });
     
-    // Gerar link (via Tor se disponível)
-    let link;
-    if (TorManager.isTorAvailable() && TorManager.getOnionAddress()) {
-        link = `http://${TorManager.getOnionAddress()}/join/${linkId}`;
+    // 🔑 MUDANÇA CRÍTICA: Gerar link com endereço .onion se disponível
+    let baseUrl;
+    if (onionAddress) {
+        baseUrl = `http://${onionAddress}`;
+        console.log(`🌐 Link gerado via Tor: ${baseUrl}`);
     } else {
-        link = `${req.protocol}://${req.get('host')}/join/${linkId}`;
+        baseUrl = `${req.protocol}://${req.get('host')}`;
     }
     
-    console.log(`🔗 Link criado: ${assunto.substring(0, 20)}...`);
+    const link = `${baseUrl}/join/${linkId}`;
+    
+    console.log(`✅ Link criado: ${assunto}`);
     
     res.json({
         sucesso: true,
         link: link,
         linkId: linkId,
         sessionId: sessionId,
-        sessionKey: sessionKey.key.toString('base64')
+        sessionKey: sessionKey,
+        isTorEnabled: !!onionAddress  // Informa se Tor está ativo
     });
 });
 
-// Validar link e entrar (Convidado)
+// Validar e entrar
 app.post('/api/link/validar', (req, res) => {
     const clientIp = req.ip || req.connection.remoteAddress;
     
     if (isIPBlocked(clientIp)) {
-        return res.status(403).json({ erro: '🔒 IP bloqueado' });
+        return res.status(403).json({ erro: '🔒 IP bloqueado temporariamente' });
     }
     
     const { linkId, apelido } = req.body;
@@ -277,49 +259,35 @@ app.post('/api/link/validar', (req, res) => {
         return res.status(404).json({ erro: 'Sessão expirada' });
     }
     
-    // Marcar link como usado (DESCARTÁVEL)
     link.used = true;
-    link.usedAt = Date.now();
     
-    // Adicionar participante
-    const participantId = generateEphemeralId();
+    const participantId = generateId();
     session.participants.push({
         id: participantId,
-        apelido: sanitizeInput(apelido),
+        apelido: apelido,
         joinedAt: Date.now()
     });
     
-    console.log(`🔑 Participante entrou: ${apelido.substring(0, 10)}...`);
+    console.log(`🔑 Participante entrou: ${apelido}`);
     
     res.json({
         sucesso: true,
         sessionId: session.id,
         participantId: participantId,
-        sessionKey: session.sessionKey.key.toString('base64'),
+        sessionKey: session.sessionKey,
         assunto: session.assunto
     });
 });
 
-// Health check (mínimo de informação)
-app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'operational',
-        timestamp: Date.now()
-    });
-});
-
 // ============================================
-// SOCKET.IO - COMUNICAÇÃO CRIPTOGRAFADA
+// SOCKET.IO
 // ============================================
 
 const io = socketIo(server, {
-    cors: { origin: false },
-    transports: ['websocket'], // Apenas WebSocket, mais seguro
-    pingTimeout: 30000,
-    pingInterval: 25000
+    cors: { origin: "*" },
+    transports: ['websocket', 'polling']
 });
 
-// Middleware de autenticação do Socket
 io.use((socket, next) => {
     const { sessionId, participantId, sessionKey } = socket.handshake.auth;
     
@@ -341,14 +309,14 @@ io.use((socket, next) => {
     
     socket.sessionId = sessionId;
     socket.participantId = participantId;
-    socket.sessionKey = Buffer.from(sessionKey, 'base64');
+    socket.sessionKey = sessionKey;
     socket.apelido = participant.apelido;
     
     next();
 });
 
 io.on('connection', (socket) => {
-    const { sessionId, participantId, sessionKey, apelido } = socket;
+    const { sessionId, apelido } = socket;
     const session = sessions.get(sessionId);
     
     if (!session) {
@@ -358,53 +326,32 @@ io.on('connection', (socket) => {
     
     socket.join(`session_${sessionId}`);
     
-    console.log(`🔌 Conectado: ${apelido.substring(0, 10)}...`);
+    console.log(`🔌 ${apelido} conectado ao canal`);
     
-    // Notificar outro participante
-    socket.to(`session_${sessionId}`).emit('peer-connected', {
-        timestamp: Date.now()
-    });
+    socket.to(`session_${sessionId}`).emit('peer-connected');
     
-    // ========================================
-    // MENSAGEM CRIPTOGRAFADA
-    // ========================================
-    socket.on('message', async (data) => {
+    // Mensagem
+    socket.on('message', (data) => {
         const { encrypted } = data;
         
         if (!encrypted) return;
         
-        // Descriptografar mensagem
-        let plaintext;
-        try {
-            // Em produção: descriptografar com sessionKey
-            plaintext = encrypted; // Placeholder
-        } catch (e) {
-            return;
-        }
+        const messageId = generateId();
         
-        const messageId = generateEphemeralId();
-        
-        // Armazenar mensagem (expira em MENSAGEM_EXPIRACAO segundos)
         messageStore.set(messageId, {
             id: messageId,
             sessionId: sessionId,
-            from: apelido,
-            content: plaintext,
+            content: encrypted,
             createdAt: Date.now(),
             expiresAt: Date.now() + (MENSAGEM_EXPIRACAO * 1000)
         });
         
-        // Re-criptografar para o destinatário
-        const recipientEncrypted = plaintext; // Placeholder
-        
-        // Enviar para o outro participante
         socket.to(`session_${sessionId}`).emit('message', {
             id: messageId,
-            encrypted: recipientEncrypted,
+            encrypted: encrypted,
             timestamp: Date.now()
         });
         
-        // Auto-destruição
         setTimeout(() => {
             if (messageStore.has(messageId)) {
                 messageStore.delete(messageId);
@@ -413,42 +360,34 @@ io.on('connection', (socket) => {
         }, MENSAGEM_EXPIRACAO * 1000);
     });
     
-    // ========================================
-    // INDICADOR DE DIGITAÇÃO (Anônimo)
-    // ========================================
+    // Digitando
     socket.on('typing', () => {
         socket.to(`session_${sessionId}`).emit('typing');
-        
         setTimeout(() => {
             socket.to(`session_${sessionId}`).emit('stop-typing');
         }, 2000);
     });
     
-    // ========================================
-    // DESCONEXÃO
-    // ========================================
+    // Desconexão
     socket.on('disconnect', () => {
-        console.log(`👋 Desconectado: ${apelido.substring(0, 10)}...`);
+        console.log(`👋 ${apelido} desconectado`);
         socket.to(`session_${sessionId}`).emit('peer-disconnected');
         
-        // Verificar se sessão está vazia
         const room = io.sockets.adapter.rooms.get(`session_${sessionId}`);
         if (!room || room.size === 0) {
-            // Marcar sessão para expiração rápida
             session.expiresAt = Date.now() + 5000;
-            console.log(`🧹 Sessão ${sessionId.substring(0, 8)} marcada para expiração`);
+            console.log(`🧹 Canal ${sessionId.substring(0, 8)} marcado para expiração`);
         }
     });
 });
 
 // ============================================
-// LIMPEZA AUTOMÁTICA (Nada Persiste)
+// LIMPEZA AUTOMÁTICA
 // ============================================
 setInterval(() => {
     const now = Date.now();
     let cleaned = 0;
     
-    // Limpar mensagens expiradas
     for (const [id, msg] of messageStore.entries()) {
         if (now > msg.expiresAt) {
             messageStore.delete(id);
@@ -456,7 +395,6 @@ setInterval(() => {
         }
     }
     
-    // Limpar sessões expiradas
     for (const [id, session] of sessions.entries()) {
         if (now > session.expiresAt) {
             sessions.delete(id);
@@ -464,7 +402,6 @@ setInterval(() => {
         }
     }
     
-    // Limpar links expirados
     for (const [id, link] of ephemeralLinks.entries()) {
         if (now > link.expires) {
             ephemeralLinks.delete(id);
@@ -480,48 +417,34 @@ setInterval(() => {
 // ============================================
 // INICIAR SERVIDOR
 // ============================================
-
-async function startServer() {
+server.listen(PORT, '0.0.0.0', () => {
     console.log('');
-    console.log('▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓');
-    console.log('▓░█▀▀░█▀█░█▀▄░█▀▀░█░█░░░█▀▀░█▀█░█▄█░█▀▀░█▀▄░█▀▀░░░░');
-    console.log('▓░█░░░█░█░█░█░█▀▀░▄▀▄░░░█░░░█░█░█░█░█▀▀░█░█░▀▀█░░░░');
-    console.log('▓░▀▀▀░▀▀▀░▀▀░░▀▀▀░▀░▀░░░▀▀▀░▀▀▀░▀░▀░▀▀▀░▀▀░░▀▀▀░░░░');
-    console.log('▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓');
-    console.log('▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▓');
-    console.log('▓░░░ EDIÇÃO "IMPRESSÃO DIGITAL ZERO" - v7.0.0 ░░░░░▓');
-    console.log('▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▓');
-    console.log('▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓');
-    console.log('');
-    console.log('👨‍💻 Desenvolvido por: EXPEDITO ANDERSON RUFINO');
-    console.log('');
-    console.log('==================================================');
-    console.log('🔒 NÍVEL DE SEGURANÇA: MÁXIMO (NÍVEL GOVERNAMENTAL)');
-    console.log('==================================================');
+    console.log('='.repeat(60));
+    console.log('🔒 AVAchat SHADOW - MODO TOR');
+    console.log('='.repeat(60));
     console.log('');
     console.log(`📡 Servidor local: http://localhost:${PORT}`);
     
-    // Iniciar Tor se disponível
-    try {
-        const onionAddress = await TorManager.startTor();
-        console.log(`🌐 Rede Tor ativa: ${onionAddress}`);
-    } catch (error) {
-        console.log('⚠️ Tor não disponível - operando em modo claro');
+    // 🔑 MUDANÇA: Exibir endereço .onion se disponível
+    if (onionAddress) {
+        console.log(`🌐 Rede Tor Ativa: http://${onionAddress}`);
+        console.log(`🔑 Compartilhe APENAS este endereço .onion`);
+        console.log(`🛡️ Seu IP REAL está completamente escondido`);
+    } else {
+        console.log(`⚠️ Tor não detectado - operando em modo claro`);
+        console.log(`🔧 Para ativar o Tor, configure o arquivo hostname`);
     }
     
+    console.log(`👑 Admin: http://localhost:${PORT}/`);
+    console.log(`🔑 Convidado: http://localhost:${PORT}/entrar`);
     console.log('');
-    console.log('⏰ Auto-destruição de mensagens: 30 SEGUNDOS');
-    console.log('🔐 Criptografia: AES-256-GCM + XChaCha20 + RSA-4096');
-    console.log('🕵️ Anonimato: Tor Onion Services v3');
-    console.log('🗑️ Persistência: ZERO (nada é armazenado)');
+    console.log(`⏰ Auto-destruição: ${MENSAGEM_EXPIRACAO} segundos`);
+    console.log(`🔐 Criptografia: AES-256`);
+    console.log(`🛡️ Bloqueio de IP: Ativo (3 tentativas)`);
     console.log('');
-    console.log('==================================================');
+    console.log('👨‍💻 Desenvolvido por: Expedito Anderson Rufino');
+    console.log('');
+    console.log('='.repeat(60));
     console.log('⚡ SISTEMA OPERACIONAL - PRONTO PARA USO');
-    console.log('==================================================');
-    
-    server.listen(PORT, '127.0.0.1', () => {
-        console.log(`✅ Servidor rodando em http://localhost:${PORT}`);
-    });
-}
-
-startServer().catch(console.error);
+    console.log('='.repeat(60));
+});

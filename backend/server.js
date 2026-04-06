@@ -1,7 +1,7 @@
 // ============================================
-// AVAchat SHADOW - COM TOR
+// AVAchat SHADOW - COM TOR (VERSÃO CORRIGIDA)
 // Desenvolvido por: Expedito Anderson Rufino
-// Versão: 7.1.0 - Anonimato Total
+// Versão: 7.2.0 - Chat 1:1 Funcional
 // ============================================
 
 require('dotenv').config();
@@ -28,35 +28,22 @@ const PORT = 3000;
 const MENSAGEM_EXPIRACAO = 30;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-// 🔑 CHAVE MESTRA
-const MASTER_KEY = process.env.MASTER_KEY;
-if (!MASTER_KEY) {
-    console.warn('⚠️ MASTER_KEY não configurada');
-}
-
 // ============================================
-// CONFIGURAÇÃO DO TOR (APENAS ISSO FOI ADICIONADO)
+// CONFIGURAÇÃO DO TOR
 // ============================================
 
-// Caminho do arquivo hostname do Tor (ajuste conforme sua instalação)
-const TOR_PATHS = [
-    'C:\\tor\\Data\\hidden_service\\hostname',
-    'C:\\Users\\exped\\tor\\Data\\hidden_service\\hostname',
-    process.env.TOR_HOSTNAME_PATH
-].filter(Boolean);
+const TOR_HOSTNAME_PATH = 'C:\\Users\\exped\\AVA.chat\\tor\\Data\\hidden_service\\hostname';
 
 function getOnionAddress() {
-    for (const torPath of TOR_PATHS) {
-        try {
-            if (fs.existsSync(torPath)) {
-                const address = fs.readFileSync(torPath, 'utf8').trim();
-                if (address && address.endsWith('.onion')) {
-                    return address;
-                }
+    try {
+        if (fs.existsSync(TOR_HOSTNAME_PATH)) {
+            const address = fs.readFileSync(TOR_HOSTNAME_PATH, 'utf8').trim();
+            if (address && address.endsWith('.onion')) {
+                return address;
             }
-        } catch (error) {
-            // Continua tentando outros caminhos
         }
+    } catch (error) {
+        // Tor não disponível
     }
     return null;
 }
@@ -67,10 +54,10 @@ const onionAddress = getOnionAddress();
 // ESTRUTURAS DE DADOS
 // ============================================
 
-const sessions = new Map();
-const ephemeralLinks = new Map();
-const messageStore = new Map();
-const ipBlacklist = new Map();
+const sessions = new Map();        // sessionId -> dados da sessão
+const ephemeralLinks = new Map();   // linkId -> dados do link
+const messageStore = new Map();     // messageId -> mensagem
+const ipBlacklist = new Map();      // IP -> tentativas
 
 // ============================================
 // MIDDLEWARES
@@ -85,6 +72,7 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             connectSrc: ["'self'", "wss:", "ws:"],
+            styleSrcElem: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         },
     },
 }));
@@ -101,11 +89,7 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-const upload = multer({
-    limits: { fileSize: MAX_FILE_SIZE },
-    storage: multer.memoryStorage()
-});
-
+// Servir arquivos estáticos da pasta frontend
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 // ============================================
@@ -170,7 +154,7 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'online', timestamp: Date.now() });
 });
 
-// Criar link (MODIFICADO: suporte a links .onion)
+// 🔑 CRÍTICO: Criar link (Admin)
 app.post('/api/link/criar', (req, res) => {
     const clientIp = req.ip || req.connection.remoteAddress;
     
@@ -188,45 +172,45 @@ app.post('/api/link/criar', (req, res) => {
     const linkId = generateId();
     const sessionKey = generateId();
     
+    // Criar sessão
     sessions.set(sessionId, {
         id: sessionId,
         assunto: assunto,
         sessionKey: sessionKey,
         createdAt: Date.now(),
         expiresAt: Date.now() + (30 * 60 * 1000),
-        participants: []
+        participants: []  // Lista de participantes
     });
     
+    // Criar link descartável
     ephemeralLinks.set(linkId, {
         sessionId: sessionId,
         expires: Date.now() + (24 * 60 * 60 * 1000),
         used: false
     });
     
-    // 🔑 MUDANÇA CRÍTICA: Gerar link com endereço .onion se disponível
+    // Gerar URL base (Tor ou local)
     let baseUrl;
     if (onionAddress) {
         baseUrl = `http://${onionAddress}`;
-        console.log(`🌐 Link gerado via Tor: ${baseUrl}`);
     } else {
-        baseUrl = `${req.protocol}://${req.get('host')}`;
+        baseUrl = `http://localhost:${PORT}`;
     }
     
     const link = `${baseUrl}/join/${linkId}`;
     
-    console.log(`✅ Link criado: ${assunto}`);
+    console.log(`✅ Link criado: ${assunto} - ID: ${linkId.substring(0, 8)}`);
     
     res.json({
         sucesso: true,
         link: link,
         linkId: linkId,
         sessionId: sessionId,
-        sessionKey: sessionKey,
-        isTorEnabled: !!onionAddress  // Informa se Tor está ativo
+        sessionKey: sessionKey
     });
 });
 
-// Validar e entrar
+// 🔑 CRÍTICO: Validar e entrar (Convidado)
 app.post('/api/link/validar', (req, res) => {
     const clientIp = req.ip || req.connection.remoteAddress;
     
@@ -259,16 +243,21 @@ app.post('/api/link/validar', (req, res) => {
         return res.status(404).json({ erro: 'Sessão expirada' });
     }
     
+    // Marcar link como usado (DESTRUIÇÃO)
     link.used = true;
+    link.usedAt = Date.now();
     
+    // Criar ID do participante
     const participantId = generateId();
+    
+    // Adicionar participante à sessão
     session.participants.push({
         id: participantId,
         apelido: apelido,
         joinedAt: Date.now()
     });
     
-    console.log(`🔑 Participante entrou: ${apelido}`);
+    console.log(`🔑 Participante entrou: ${apelido} (${participantId.substring(0, 8)})`);
     
     res.json({
         sucesso: true,
@@ -280,7 +269,7 @@ app.post('/api/link/validar', (req, res) => {
 });
 
 // ============================================
-// SOCKET.IO
+// SOCKET.IO - COMUNICAÇÃO EM TEMPO REAL
 // ============================================
 
 const io = socketIo(server, {
@@ -288,23 +277,34 @@ const io = socketIo(server, {
     transports: ['websocket', 'polling']
 });
 
+// 🔑 CRÍTICO: Middleware de autenticação
 io.use((socket, next) => {
     const { sessionId, participantId, sessionKey } = socket.handshake.auth;
     
     if (!sessionId || !participantId || !sessionKey) {
+        console.log('❌ Conexão rejeitada: credenciais faltando');
         return next(new Error('Credenciais inválidas'));
     }
     
     const session = sessions.get(sessionId);
     
     if (!session || session.expiresAt < Date.now()) {
+        console.log('❌ Conexão rejeitada: sessão expirada');
         return next(new Error('Sessão expirada'));
     }
     
+    // Verificar se o participantId existe na sessão
     const participant = session.participants.find(p => p.id === participantId);
     
     if (!participant) {
+        console.log('❌ Conexão rejeitada: participante não encontrado');
         return next(new Error('Participante não encontrado'));
+    }
+    
+    // Verificar chave da sessão
+    if (session.sessionKey !== sessionKey) {
+        console.log('❌ Conexão rejeitada: chave inválida');
+        return next(new Error('Chave inválida'));
     }
     
     socket.sessionId = sessionId;
@@ -312,11 +312,13 @@ io.use((socket, next) => {
     socket.sessionKey = sessionKey;
     socket.apelido = participant.apelido;
     
+    console.log(`✅ Socket autenticado: ${socket.apelido} (${participantId.substring(0, 8)})`);
+    
     next();
 });
 
 io.on('connection', (socket) => {
-    const { sessionId, apelido } = socket;
+    const { sessionId, apelido, participantId } = socket;
     const session = sessions.get(sessionId);
     
     if (!session) {
@@ -324,57 +326,101 @@ io.on('connection', (socket) => {
         return;
     }
     
-    socket.join(`session_${sessionId}`);
+    // Entrar na sala do Socket.IO
+    const roomName = `session_${sessionId}`;
+    socket.join(roomName);
     
-    console.log(`🔌 ${apelido} conectado ao canal`);
+    console.log(`🔌 ${apelido} conectado ao canal ${sessionId.substring(0, 8)}`);
     
-    socket.to(`session_${sessionId}`).emit('peer-connected');
+    // 🔑 CRÍTICO: Notificar o OUTRO participante que alguém entrou
+    socket.to(roomName).emit('peer-connected', {
+        apelido: apelido,
+        timestamp: Date.now()
+    });
     
-    // Mensagem
+    // Enviar histórico de mensagens (últimas 50)
+    const historico = Array.from(messageStore.values())
+        .filter(msg => msg.sessionId === sessionId)
+        .slice(-50)
+        .map(msg => ({
+            id: msg.id,
+            content: msg.content,
+            from: msg.from,
+            timestamp: msg.createdAt
+        }));
+    
+    if (historico.length > 0) {
+        socket.emit('historico', historico);
+    }
+    
+    // ========================================
+    // EVENTO: MENSAGEM
+    // ========================================
     socket.on('message', (data) => {
-        const { encrypted } = data;
+        const { content } = data;
         
-        if (!encrypted) return;
+        if (!content || content.trim() === '') return;
         
         const messageId = generateId();
+        const roomName = `session_${sessionId}`;
         
+        // Armazenar mensagem (expira em MENSAGEM_EXPIRACAO segundos)
         messageStore.set(messageId, {
             id: messageId,
             sessionId: sessionId,
-            content: encrypted,
+            content: content,
+            from: apelido,
             createdAt: Date.now(),
             expiresAt: Date.now() + (MENSAGEM_EXPIRACAO * 1000)
         });
         
-        socket.to(`session_${sessionId}`).emit('message', {
+        console.log(`💬 ${apelido}: ${content.substring(0, 30)}...`);
+        
+        // 🔑 CRÍTICO: Enviar para TODOS na sala (incluindo o remetente)
+        io.to(roomName).emit('message', {
             id: messageId,
-            encrypted: encrypted,
+            content: content,
+            from: apelido,
             timestamp: Date.now()
         });
         
+        // Auto-destruição da mensagem
         setTimeout(() => {
             if (messageStore.has(messageId)) {
                 messageStore.delete(messageId);
-                io.to(`session_${sessionId}`).emit('message-destroyed', { id: messageId });
+                io.to(roomName).emit('message-destroyed', { id: messageId });
             }
         }, MENSAGEM_EXPIRACAO * 1000);
     });
     
-    // Digitando
+    // ========================================
+    // EVENTO: DIGITANDO
+    // ========================================
     socket.on('typing', () => {
-        socket.to(`session_${sessionId}`).emit('typing');
+        const roomName = `session_${sessionId}`;
+        socket.to(roomName).emit('typing', { from: apelido });
+        
         setTimeout(() => {
-            socket.to(`session_${sessionId}`).emit('stop-typing');
+            socket.to(roomName).emit('stop-typing');
         }, 2000);
     });
     
-    // Desconexão
+    // ========================================
+    // EVENTO: DESCONEXÃO
+    // ========================================
     socket.on('disconnect', () => {
-        console.log(`👋 ${apelido} desconectado`);
-        socket.to(`session_${sessionId}`).emit('peer-disconnected');
+        console.log(`👋 ${apelido} desconectado do canal ${sessionId.substring(0, 8)}`);
         
-        const room = io.sockets.adapter.rooms.get(`session_${sessionId}`);
+        const roomName = `session_${sessionId}`;
+        socket.to(roomName).emit('peer-disconnected', {
+            apelido: apelido,
+            timestamp: Date.now()
+        });
+        
+        // Verificar se a sala está vazia
+        const room = io.sockets.adapter.rooms.get(roomName);
         if (!room || room.size === 0) {
+            // Marcar sessão para expiração rápida
             session.expiresAt = Date.now() + 5000;
             console.log(`🧹 Canal ${sessionId.substring(0, 8)} marcado para expiração`);
         }
@@ -388,6 +434,7 @@ setInterval(() => {
     const now = Date.now();
     let cleaned = 0;
     
+    // Limpar mensagens expiradas
     for (const [id, msg] of messageStore.entries()) {
         if (now > msg.expiresAt) {
             messageStore.delete(id);
@@ -395,6 +442,7 @@ setInterval(() => {
         }
     }
     
+    // Limpar sessões expiradas
     for (const [id, session] of sessions.entries()) {
         if (now > session.expiresAt) {
             sessions.delete(id);
@@ -402,6 +450,7 @@ setInterval(() => {
         }
     }
     
+    // Limpar links expirados
     for (const [id, link] of ephemeralLinks.entries()) {
         if (now > link.expires) {
             ephemeralLinks.delete(id);
@@ -410,7 +459,7 @@ setInterval(() => {
     }
     
     if (cleaned > 0) {
-        console.log(`🧹 Limpeza automática: ${cleaned} itens destruídos`);
+        console.log(`🧹 Limpeza: ${cleaned} itens destruídos`);
     }
 }, 10000);
 
@@ -420,19 +469,17 @@ setInterval(() => {
 server.listen(PORT, '0.0.0.0', () => {
     console.log('');
     console.log('='.repeat(60));
-    console.log('🔒 AVAchat SHADOW - MODO TOR');
+    console.log('🔒 AVAchat SHADOW - MODO OPERACIONAL');
     console.log('='.repeat(60));
     console.log('');
     console.log(`📡 Servidor local: http://localhost:${PORT}`);
     
-    // 🔑 MUDANÇA: Exibir endereço .onion se disponível
     if (onionAddress) {
         console.log(`🌐 Rede Tor Ativa: http://${onionAddress}`);
         console.log(`🔑 Compartilhe APENAS este endereço .onion`);
-        console.log(`🛡️ Seu IP REAL está completamente escondido`);
     } else {
         console.log(`⚠️ Tor não detectado - operando em modo claro`);
-        console.log(`🔧 Para ativar o Tor, configure o arquivo hostname`);
+        console.log(`🔧 Para ativar o Tor, aguarde a geração do endereço .onion`);
     }
     
     console.log(`👑 Admin: http://localhost:${PORT}/`);

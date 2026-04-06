@@ -1,5 +1,6 @@
 // ============================================
-// AVAchat SHADOW - Cliente Ultra Seguro
+// AVAchat SHADOW - Cliente (VERSÃO CORRIGIDA)
+// Desenvolvido por: Expedito Anderson Rufino
 // ============================================
 
 let socket = null;
@@ -7,6 +8,7 @@ let sessionId = null;
 let participantId = null;
 let sessionKey = null;
 let meuApelido = null;
+let typingTimeout = null;
 
 // ============================================
 // TELA DO ADMIN (index.html)
@@ -23,6 +25,8 @@ if (document.getElementById('btn-criar-link')) {
     const adminApelido = document.getElementById('admin-apelido');
 
     let linkCriado = null;
+    let sessionIdTemp = null;
+    let sessionKeyTemp = null;
 
     btnCriar.addEventListener('click', async () => {
         const assunto = document.getElementById('assunto').value.trim();
@@ -46,10 +50,10 @@ if (document.getElementById('btn-criar-link')) {
             if (!response.ok) throw new Error(data.erro);
 
             linkCriado = data.link;
-            linkInput.value = data.link;
-            sessionId = data.sessionId;
-            sessionKey = data.sessionKey;
+            sessionIdTemp = data.sessionId;
+            sessionKeyTemp = data.sessionKey;
             
+            linkInput.value = data.link;
             modal.style.display = 'block';
 
         } catch (error) {
@@ -107,6 +111,7 @@ if (document.getElementById('btn-criar-link')) {
                 
                 sessionId = data.sessionId;
                 participantId = data.participantId;
+                sessionKey = data.sessionKey;
                 meuApelido = apelido;
                 
                 sessionStorage.setItem('sessionId', sessionId);
@@ -230,9 +235,7 @@ if (document.getElementById('btn-validar-link')) {
 // ============================================
 
 if (document.querySelector('.chat-container')) {
-    let typingTimeout = null;
-    let outroConectado = false;
-
+    // Recuperar dados da sessão
     sessionId = sessionStorage.getItem('sessionId');
     participantId = sessionStorage.getItem('participantId');
     sessionKey = sessionStorage.getItem('sessionKey');
@@ -250,44 +253,67 @@ if (document.querySelector('.chat-container')) {
     const meuApelidoDisplay = document.getElementById('meu-apelido-display');
     if (meuApelidoDisplay) meuApelidoDisplay.textContent = `👤 ${meuApelido}`;
 
-    // Conectar WebSocket
+    const onlineIndicator = document.getElementById('online-indicator');
+    const onlineText = document.getElementById('online-text');
+
+    let outroConectado = false;
+
+    // ========================================
+    // CONEXÃO SOCKET
+    // ========================================
     function conectarSocket() {
         socket = io({
-            auth: { sessionId, participantId, sessionKey },
-            transports: ['websocket']
+            auth: { 
+                sessionId: sessionId, 
+                participantId: participantId, 
+                sessionKey: sessionKey 
+            },
+            transports: ['websocket', 'polling']
         });
 
         socket.on('connect', () => {
-            console.log('✅ CONECTADO');
+            console.log('✅ Conectado ao servidor');
             adicionarMensagemSistema('🔐 CONEXÃO ESTABELECIDA');
         });
 
-        socket.on('peer-connected', () => {
+        socket.on('peer-connected', (data) => {
             outroConectado = true;
-            const indicator = document.getElementById('online-indicator');
-            if (indicator) indicator.classList.add('online');
-            adicionarMensagemSistema('🔌 PARCEIRO CONECTADO');
+            if (onlineIndicator) onlineIndicator.classList.add('online');
+            if (onlineText) onlineText.textContent = 'PARCEIRO CONECTADO';
+            adicionarMensagemSistema(`🔌 PARCEIRO CONECTADO`);
         });
 
         socket.on('peer-disconnected', () => {
             outroConectado = false;
-            const indicator = document.getElementById('online-indicator');
-            if (indicator) indicator.classList.remove('online');
+            if (onlineIndicator) onlineIndicator.classList.remove('online');
+            if (onlineText) onlineText.textContent = 'AGUARDANDO CONEXÃO';
             adicionarMensagemSistema('⚠️ PARCEIRO DESCONECTADO');
         });
 
+        socket.on('historico', (mensagens) => {
+            mensagens.forEach(msg => {
+                adicionarMensagem(msg.content, msg.from, msg.timestamp);
+            });
+        });
+
         socket.on('message', (data) => {
-            adicionarMensagem(data.encrypted, false);
+            adicionarMensagem(data.content, data.from, data.timestamp);
         });
 
         socket.on('message-destroyed', ({ id }) => {
             const msgElement = document.querySelector(`.message[data-id="${id}"]`);
-            if (msgElement) msgElement.remove();
+            if (msgElement) {
+                msgElement.style.opacity = '0';
+                setTimeout(() => {
+                    if (msgElement.parentNode) msgElement.remove();
+                }, 500);
+            }
         });
 
-        socket.on('typing', () => {
+        socket.on('typing', (data) => {
             const indicator = document.getElementById('typing-indicator');
             indicator.style.display = 'block';
+            indicator.innerHTML = `<span>✍️ ${data.from} está digitando...</span>`;
             setTimeout(() => {
                 indicator.style.display = 'none';
             }, 2000);
@@ -298,30 +324,50 @@ if (document.querySelector('.chat-container')) {
         });
 
         socket.on('disconnect', () => {
-            adicionarMensagemSistema('❌ DESCONECTADO');
+            adicionarMensagemSistema('❌ DESCONECTADO DO SERVIDOR');
+            if (onlineIndicator) onlineIndicator.classList.remove('online');
+            if (onlineText) onlineText.textContent = 'DESCONECTADO';
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('Erro de conexão:', error);
+            adicionarMensagemSistema('❌ ERRO DE CONEXÃO: ' + error.message);
         });
     }
 
+    // ========================================
+    // FUNÇÕES DE INTERFACE
+    // ========================================
     function enviarMensagem() {
         const input = document.getElementById('mensagem');
         const conteudo = input.value.trim();
         
-        if (!conteudo || !socket) return;
+        if (!conteudo || !socket || !socket.connected) {
+            if (!socket || !socket.connected) {
+                adicionarMensagemSistema('❌ SEM CONEXÃO COM O SERVIDOR');
+            }
+            return;
+        }
         
-        // Em produção: criptografar com sessionKey
-        const encrypted = conteudo;
-        
-        socket.emit('message', { encrypted });
-        adicionarMensagem(conteudo, true);
+        socket.emit('message', { content: conteudo });
         input.value = '';
     }
 
-    function adicionarMensagem(texto, isOwn = false) {
+    function adicionarMensagem(texto, autor, timestamp) {
         const messagesDiv = document.getElementById('chat-messages');
         const messageDiv = document.createElement('div');
         
+        const isOwn = autor === meuApelido;
+        
         messageDiv.className = `message ${isOwn ? 'message-own' : 'message-other'}`;
+        
+        const hora = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+        
         messageDiv.innerHTML = `
+            <div class="message-header">
+                <span class="apelido">${isOwn ? 'Você' : escapeHtml(autor)}</span>
+                <span class="hora">${hora}</span>
+            </div>
             <div class="message-text">${escapeHtml(texto)}</div>
             <div class="expiring-badge">⏰ 30s</div>
         `;
@@ -329,9 +375,11 @@ if (document.querySelector('.chat-container')) {
         messagesDiv.appendChild(messageDiv);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
         
+        // Auto-destruição visual
         setTimeout(() => {
             if (messageDiv.parentNode) {
                 messageDiv.style.opacity = '0';
+                messageDiv.style.transition = 'opacity 0.5s';
                 setTimeout(() => {
                     if (messageDiv.parentNode) messageDiv.remove();
                 }, 500);
@@ -349,7 +397,7 @@ if (document.querySelector('.chat-container')) {
         
         setTimeout(() => {
             if (systemDiv.parentNode) systemDiv.remove();
-        }, 3000);
+        }, 5000);
     }
 
     function escapeHtml(texto) {
@@ -358,16 +406,22 @@ if (document.querySelector('.chat-container')) {
         return div.innerHTML;
     }
 
-    // Configurar eventos
+    // ========================================
+    // EVENTOS DE UI
+    // ========================================
     function setupEvents() {
         const inputMensagem = document.getElementById('mensagem');
         const btnEnviar = document.getElementById('btn-enviar');
         
-        if (btnEnviar) btnEnviar.addEventListener('click', enviarMensagem);
+        if (btnEnviar) {
+            btnEnviar.addEventListener('click', enviarMensagem);
+        }
         
         if (inputMensagem) {
             inputMensagem.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') enviarMensagem();
+                if (e.key === 'Enter') {
+                    enviarMensagem();
+                }
             });
             
             inputMensagem.addEventListener('input', () => {
@@ -382,8 +436,9 @@ if (document.querySelector('.chat-container')) {
         }
     }
 
+    // Iniciar
     conectarSocket();
     setupEvents();
 }
 
-console.log('✅ AVAchat SHADOW carregado');
+console.log('✅ AVAchat SHADOW v7.2 carregado');

@@ -47,6 +47,15 @@
             background-image: radial-gradient(rgba(255,255,255,0.01) 1px, transparent 1px);
             background-size: 20px 20px;
         }
+        
+        .command-line {
+            font-family: monospace;
+            font-size: 10px;
+            color: #666;
+            background: #000;
+            padding: 6px;
+            border-left: 2px solid #333;
+        }
     </style>
 </head>
 <body>
@@ -64,14 +73,14 @@
 
         <div class="chat-container">
             <div class="terminal-header">
-                <span>⫸ AVAchat_Shadow_v7.0@secure:~$</span>
+                <span>⫸ AVAchat_Shadow_v7.2@secure:~$</span>
                 <span style="color: #0f0;">canal_seguro_estabelecido</span>
                 <span class="blink">█</span>
             </div>
             
             <div class="status-bar">
                 <div class="encryption-badge">
-                    🔐 AES-256-GCM | XChaCha20 | RSA-4096
+                    🔐 AES-256 | Tor Active
                 </div>
                 <div class="online-status">
                     <span id="online-indicator"></span>
@@ -89,7 +98,7 @@
             </div>
             
             <div class="typing-indicator" id="typing-indicator" style="display: none;">
-                <span>✍️ PARCEIRO ESTÁ DIGITANDO...</span>
+                <span>✍️ ALGUÉM ESTÁ DIGITANDO...</span>
             </div>
             
             <div class="chat-input-area">
@@ -108,17 +117,6 @@
             </div>
         </div>
     </div>
-
-    <style>
-        .command-line {
-            font-family: monospace;
-            font-size: 10px;
-            color: #666;
-            background: #000;
-            padding: 6px;
-            border-left: 2px solid #333;
-        }
-    </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>

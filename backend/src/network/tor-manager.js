@@ -14,7 +14,7 @@ class TorManager {
         this.onionAddress = null;
         this.socksPort = 9050;
         this.controlPort = 9051;
-        this.hiddenServiceDir = path.join(__dirname, '../tor/data');
+        this.hiddenServiceDir = path.join(__dirname, '../../../tor/data');
         this.isRunning = false;
     }
 

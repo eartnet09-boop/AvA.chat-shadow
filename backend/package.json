@@ -2,11 +2,11 @@
     "name": "avachat-shadow",
     "version": "7.0.0",
     "description": "Comunicação ultra sigilosa - Nível Governamental",
-    "main": "server.js",
+    "main": "src/server.js",
     "scripts": {
-      "start": "node server.js",
-      "tor": "node server.js --tor",
-      "dev": "nodemon server.js",
+      "start": "node src/server.js",
+      "tor": "node src/server.js --tor",
+      "dev": "nodemon src/server.js",
       "generate-key": "node -e \"console.log(require('crypto').randomBytes(32).toString('hex') + require('crypto').randomBytes(32).toString('hex'))\""
     },
     "dependencies": {
